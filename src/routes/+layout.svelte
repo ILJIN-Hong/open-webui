@@ -50,6 +50,8 @@
 	import { beforeNavigate } from '$app/navigation';
 	import { updated } from '$app/state';
 
+	import { toastMsg } from '$lib/stores/toast';
+
 	// handle frontend updates (https://svelte.dev/docs/kit/configuration#version)
 	beforeNavigate(({ willUnload, to }) => {
 		if (updated.current && !willUnload && to?.url) {
@@ -679,3 +681,9 @@
 	position="top-right"
 	closeButton
 />
+
+{#if $toastMsg}
+	<div style="z-index:9999" class="fixed top-4 left-1/2 transform -translate-x-1/2 text-green-700 bg-green-100 border border-green-300 px-6 py-2 rounded shadow">
+		{$toastMsg}
+	</div>
+{/if}

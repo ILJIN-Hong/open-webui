@@ -125,6 +125,7 @@
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
+	let showRfqDropdown = false;
 
 	let chat = null;
 	let tags = [];
@@ -215,6 +216,10 @@
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
 		codeInterpreterEnabled = false;
+		// Reset RFQ dropdown state as well
+		if (typeof showRfqDropdown !== 'undefined') {
+			showRfqDropdown = false;
+		}
 	};
 
 	const setToolIds = async () => {
@@ -2113,19 +2118,20 @@
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled
 									bind:atSelectedModel
+									bind:showRfqDropdown
 									toolServers={$toolServers}
 									transparentBackground={$settings?.backgroundImageUrl ?? false}
 									{stopResponse}
 									{createMessagePair}
 									onChange={(input) => {
 										if (!$temporaryChatEnabled) {
-											if (input.prompt !== null) {
-												localStorage.setItem(
-													`chat-input${$chatId ? `-${$chatId}` : ''}`,
-													JSON.stringify(input)
-												);
-											} else {
-												localStorage.removeItem(`chat-input${$chatId ? `-${$chatId}` : ''}`);
+										if (input.prompt !== null) {
+											localStorage.setItem(
+												`chat-input${$chatId ? `-${$chatId}` : ''}`,
+												JSON.stringify(input)
+											);
+										} else {
+											localStorage.removeItem(`chat-input${$chatId ? `-${$chatId}` : ''}`);
 											}
 										}
 									}}

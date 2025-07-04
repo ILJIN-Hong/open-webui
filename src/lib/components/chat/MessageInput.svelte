@@ -55,8 +55,12 @@
 	import Wrench from '../icons/Wrench.svelte';
 	import CommandLine from '../icons/CommandLine.svelte';
 	import Sparkles from '../icons/Sparkles.svelte';
+	import FolderOpen from '../icons/FolderOpen.svelte';
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
+	import { goto } from '$app/navigation';
+
+	import RFQManagementPage from '$lib/components/rfq/RFQManagementPage.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -88,6 +92,53 @@
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
+
+	let showRfqModal = false;
+	let showRfqOverlay = false;
+
+	let rfqEnabled = false;
+
+	let rfqList = [];
+	let selectedRfqIds = [];
+	let selectedRfqNames = [];
+	export let showRfqDropdown = false;
+	let rfqLoading = false;
+	let rfqError = '';
+
+	let chatFormElement: HTMLFormElement;
+	let dropdownLeft = 0;
+	let dropdownTop = 0;
+
+	function updateDropdownPosition() {
+		if (chatFormElement) {
+			const rect = chatFormElement.getBoundingClientRect();
+			const dropdownWidth = 320; // w-80
+			// 스크롤 보정 추가!
+			dropdownLeft = rect.left + rect.width / 2 - dropdownWidth / 2 + window.scrollX - 100;
+			dropdownTop = rect.bottom - 150 + window.scrollY;
+		}
+	}
+
+	$: if (showRfqDropdown) {
+		updateDropdownPosition();
+	}
+
+	async function fetchRfqList() {
+		rfqLoading = true;
+		rfqError = '';
+		try {
+			const res = await fetch('http://192.168.141.235:9000/api/rfq/list');
+			if (!res.ok) throw new Error('RFQ 리스트 불러오기 실패');
+			rfqList = await res.json();
+			console.log('RFQ 리스트 로드됨:', rfqList);
+		} catch (e) {
+			rfqError = e.message;
+			rfqList = [];
+			console.error('RFQ 리스트 로드 실패:', e);
+		} finally {
+			rfqLoading = false;
+		}
+	}
 
 	$: onChange({
 		prompt,
@@ -474,6 +525,14 @@
 		dropzoneElement?.addEventListener('dragover', onDragOver);
 		dropzoneElement?.addEventListener('drop', onDrop);
 		dropzoneElement?.addEventListener('dragleave', onDragLeave);
+
+		const handleResize = () => {
+			if (showRfqDropdown) updateDropdownPosition();
+		};
+		window.addEventListener('resize', handleResize);
+		return () => {
+			window.removeEventListener('resize', handleResize);
+		};
 	});
 
 	onDestroy(() => {
@@ -641,14 +700,14 @@
 						/>
 					{:else}
 						<form
-							class="w-full flex flex-col gap-1.5"
+							class="w-full flex flex-col gap-1.5 relative"
+							bind:this={chatFormElement}
 							on:submit|preventDefault={() => {
-								// check if selectedModels support image input
 								dispatch('submit', prompt);
 							}}
 						>
 							<div
-								class="flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border border-gray-50 dark:border-gray-850 hover:border-gray-100 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800 transition px-1 bg-white/90 dark:bg-gray-400/5 dark:text-gray-100"
+								class="flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border border-gray-50 dark:border-gray-850 hover:border-gray-100 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800 transition px-1 bg-white/90 dark:bg-gray-400/5 dark:text-gray-100 overflow-visible"
 								dir={$settings?.chatDirection ?? 'auto'}
 							>
 								{#if files.length > 0}
@@ -1341,12 +1400,15 @@
 												{#if showWebSearchButton}
 													<Tooltip content={$i18n.t('Search the internet')} placement="top">
 														<button
-															on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
+															on:click|preventDefault={() => {
+																webSearchEnabled = !webSearchEnabled;
+																showRfqDropdown = false;
+															}}
 															type="button"
 															class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {webSearchEnabled ||
-															($settings?.webSearch ?? false) === 'always'
-																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
-																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
+																($settings?.webSearch ?? false) === 'always'
+																	? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+																	: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
 														>
 															<GlobeAlt className="size-4" strokeWidth="1.75" />
 															<span
@@ -1355,6 +1417,25 @@
 															>
 														</button>
 													</Tooltip>
+													<!-- RFQ 버튼 복구 -->
+													<button
+														on:click|preventDefault={async () => {
+															if (!showRfqDropdown) {
+																await fetchRfqList();
+																showRfqDropdown = true;
+															} else {
+																showRfqDropdown = false;
+															}
+															webSearchEnabled = false;
+														}}
+														type="button"
+														class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {showRfqDropdown
+															? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+															: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
+													>
+														<FolderOpen className="size-4" strokeWidth="1.75" />
+														<span class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5">RFQ</span>
+													</button>
 												{/if}
 
 												{#if showImageGenerationButton}
@@ -1581,3 +1662,68 @@
 		</div>
 	</div>
 {/if}
+{#if selectedRfqNames.length > 0}
+	<div class="flex gap-2 mt-2 flex-wrap">
+		{#each selectedRfqNames as name}
+			<span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">{name}</span>
+		{/each}
+	</div>
+{/if}
+
+{#if showRfqDropdown}
+	<div
+		class="fixed z-50 w-80 max-w-full rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+		style="left: {dropdownLeft}px; top: {dropdownTop}px;"
+	>
+		<div class="p-4">
+			<div class="font-semibold text-gray-900 dark:text-gray-100 mb-3 text-lg text-center">RFQ 선택</div>
+			{#if rfqLoading}
+				<div class="text-gray-600 dark:text-gray-400 py-4 text-center">불러오는 중...</div>
+			{:else if rfqError}
+				<div class="text-red-500 py-4 text-center">{rfqError}</div>
+			{:else}
+				<div class="max-h-48 overflow-y-auto space-y-2 border border-gray-100 dark:border-gray-700 rounded p-2 bg-gray-50 dark:bg-gray-900">
+					{#each rfqList as rfq}
+						<label class="flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer transition-colors">
+							<input 
+								type="checkbox" 
+								value={rfq.id}
+								checked={selectedRfqIds.includes(rfq.id)}
+								on:change={() => {
+									if (selectedRfqIds.includes(rfq.id)) {
+										selectedRfqIds = selectedRfqIds.filter(id => id !== rfq.id);
+									} else {
+										selectedRfqIds = [...selectedRfqIds, rfq.id];
+									}
+								}}
+								class="rounded border-gray-300 w-4 h-4"
+							/>
+							<span class="text-sm text-gray-800 dark:text-gray-200 flex-1">{rfq.name || rfq.title}</span>
+						</label>
+					{/each}
+				</div>
+				<div class="flex justify-end gap-2 mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
+					<button 
+						class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+						on:click={() => { 
+							showRfqDropdown = false; 
+							selectedRfqIds = [];
+						}}
+					>
+						취소
+					</button>
+					<button 
+						class="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+						on:click={() => {
+							selectedRfqNames = rfqList.filter(r => selectedRfqIds.includes(r.id)).map(r => r.name || r.title);
+							showRfqDropdown = false;
+						}}
+					>
+						확인
+					</button>
+				</div>
+			{/if}
+		</div>
+	</div>
+{/if}
+

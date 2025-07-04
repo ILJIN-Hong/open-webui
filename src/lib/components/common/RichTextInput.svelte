@@ -194,7 +194,9 @@
 		editor = new Editor({
 			element: element,
 			extensions: [
-				StarterKit,
+				StarterKit.configure({
+					codeBlock: false // Disable codeBlock from StarterKit to avoid duplication
+				}),
 				CodeBlockLowlight.configure({
 					lowlight
 				}),
