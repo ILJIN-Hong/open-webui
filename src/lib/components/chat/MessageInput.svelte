@@ -1429,9 +1429,10 @@
 															webSearchEnabled = false;
 														}}
 														type="button"
-														class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {showRfqDropdown
-															? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
-															: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
+														class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800
+															{(showRfqDropdown || selectedRfqIds.length > 0)
+																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
 													>
 														<FolderOpen className="size-4" strokeWidth="1.75" />
 														<span class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5">RFQ</span>
@@ -1687,13 +1688,13 @@
 						<label class="flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer transition-colors">
 							<input 
 								type="checkbox" 
-								value={rfq.id}
-								checked={selectedRfqIds.includes(rfq.id)}
+								value={rfq.uid}
+								checked={selectedRfqIds.includes(rfq.uid)}
 								on:change={() => {
-									if (selectedRfqIds.includes(rfq.id)) {
-										selectedRfqIds = selectedRfqIds.filter(id => id !== rfq.id);
+									if (selectedRfqIds.includes(rfq.uid)) {
+										selectedRfqIds = selectedRfqIds.filter(id => id !== rfq.uid);
 									} else {
-										selectedRfqIds = [...selectedRfqIds, rfq.id];
+										selectedRfqIds = [...selectedRfqIds, rfq.uid];
 									}
 								}}
 								class="rounded border-gray-300 w-4 h-4"
@@ -1715,7 +1716,7 @@
 					<button 
 						class="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
 						on:click={() => {
-							selectedRfqNames = rfqList.filter(r => selectedRfqIds.includes(r.id)).map(r => r.name || r.title);
+							selectedRfqNames = rfqList.filter(r => selectedRfqIds.includes(r.uid)).map(r => r.name || r.title);
 							showRfqDropdown = false;
 						}}
 					>
